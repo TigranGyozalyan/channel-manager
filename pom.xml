@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>io.elsci.boardeaux</groupId>
+    <artifactId>boardeaux</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <java.version>25</java.version>
+        <node.version>v25.8.2</node.version>
+        <npm.version>11.11.1</npm.version>
+        <slf4j.version>2.0.17</slf4j.version>
+        <lettuce.netty.version>4.1.132.Final</lettuce.netty.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-framework-bom</artifactId>
+                <version>7.0.6</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.security</groupId>
+                <artifactId>spring-security-bom</artifactId>
+                <version>7.0.4</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- non-vulnerable 4.1.x dependencies for lettuce client -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-common</artifactId>
+                <version>${lettuce.netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-handler</artifactId>
+                <version>${lettuce.netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-transport</artifactId>
+                <version>${lettuce.netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-resolver-dns</artifactId>
+                <version>${lettuce.netty.version}</version>
+            </dependency>
+            <!-- vulnerable dependency in RestAssured -->
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>1.19.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+            <version>12.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
+            <version>11.0.20</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-web</artifactId></dependency>
+        <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-config</artifactId></dependency>
+        <dependency><groupId>org.springframework.security</groupId><artifactId>spring-security-oauth2-client</artifactId></dependency>
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-data-redis</artifactId>
+            <version>4.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-api</artifactId>
+            <version>2.7.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>swagger-ui</artifactId>
+            <!-- If you upgrade the version, you must change the resource location in swagger-context.xml:
+             <mvc:resources ... location="classpath:/META-INF/resources/webjars/swagger-ui/5.18.2/"> -->
+            <version>5.18.2</version>
+        </dependency>
+        <!-- Updating this to latest version is not (easily) possible at the moment.
+             Our socket option connections on AARCH64 architecture. When enabling TCP keepalive option,
+             lettuce attempts to look for epoll or io-uring transports, both of which are supported only on Linux.
+             Their docs state they also support kqueue for Intel macs (https://redis.github.io/lettuce/advanced-usage/native-transports/)
+             but judging from the code this doesn't imply support for TCP keepalive since the error explicitly mentions only
+             epoll or io_uring.
+             This leaves with two ugly solutions:
+               1. Include platform-specific (if necessary) dependencies for Linux for remote envs. Local redis would break in that case
+                for all non-linux environments
+               2. Disable TCP keepalive on local and hope that remote will be fine. If there are ever any issues it would
+               be a mess to debug.
+
+             So, for the moment, we leave the older version and just swap its vulnerable netty versions. Hopefully, they will address this issue
+             in the future and provide a more straightforward way to set it up across all envs.
+             -->
+        <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+            <version>6.8.2.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.10</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mchange</groupId>
+            <artifactId>c3p0</artifactId>
+            <version>0.12.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <!-- Tomcat, Liquibase, Postgres Driver, etc - they use java.util.logging (JUL). While we want to configure
+              all the logging (not just JUL) using Logback. This SLF4J bridge allows forwarding JUL calls to Logback-->
+
+        <!-- How to configure JUL->SLF4J:
+
+             <p>
+              <b>This memo is duplicated in all the places where the bridging is configured, keep it up-to-date in all of them!</b>
+             </p>
+
+             Overall there are several places that need changes to enabled java.util.logging -> SLF4j bridging
+             (see <a href="https://www.slf4j.org/legacy.html#jul-to-slf4j">official documentation</a>):
+             <ol>
+                 <li>Add dependency jul-to-slf4j to pom.xml. The dependency contains the bridging code that accepts LogRecords from JUL</li>
+                 <li>Update production logback.xml with 2 listeners: our own JulOverSlf4jInstaller (sets up the bridging),
+                 LevelChangePropagator (passes logging levels from logback.xml to JUL)</li>
+                 <li>Do the same for the test logback.xml or any other present in the project</li>
+             </ol> -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.2</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.3.12</version>
+        </dependency>
+
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>3.1.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.qala.datagen</groupId>
+            <artifactId>qala-datagen</artifactId>
+            <version>2.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.qala.datagen</groupId>
+            <artifactId>qala-datagen-java8types</artifactId>
+            <version>2.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>spring-mock-mvc</artifactId>
+            <version>6.0.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <version>2.0.4</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <!--filtering wil add current build version and commit info-->
+                <includes><include>version.properties</include></includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes><exclude>version.properties</exclude></excludes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.1</version>
+                <configuration>
+                    <parameters>true</parameters>
+                    <!-- As opposed to source/target versions this one checks not only syntax,
+                    but also that classes/methods are available in the target version-->
+                    <release>${java.version}</release>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.5.4</version>
+                <configuration>
+                    <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+                    <systemPropertyVariables>
+                        <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
+                        <maven.home>${maven.home}</maven.home>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+            </plugin>
+        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.1.0</version>
+                    <executions>
+                        <execution>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>shade</goal>
+                            </goals>
+                            <configuration>
+                                <transformers>
+                                    <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                        <mainClass>com.tgyozalyan.channelmanager.Main</mainClass>
+                                    </transformer>
+                                    <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                        <resource>META-INF/spring.handlers</resource>
+                                    </transformer>
+                                    <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                        <resource>META-INF/spring.schemas</resource>
+                                    </transformer>
+                                    <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                        <!-- Flyway: https://github.com/flyway/flyway/issues/4170-->
+                                        <resource>META-INF/services/org.flywaydb.core.extensibility.Plugin</resource>
+                                    </transformer>
+                                </transformers>
+
+                                <filters>
+                                    <!--Because we're repacking with shade plug-in (which is questionable) the signatures inside the
+                                    archives are put into our main JAR which makes it seem our JAR is signed (and signed incorrectly).
+                                    So let's remove those signatures.-->
+                                    <filter>
+                                        <artifact>org.bouncycastle:bcprov-jdk15on</artifact>
+                                        <excludes>
+                                            <exclude>META-INF/*.SF</exclude>
+                                            <exclude>META-INF/*.DSA</exclude>
+                                            <exclude>META-INF/*.RSA</exclude>
+                                        </excludes>
+                                    </filter>
+                                </filters>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>io.gatling</groupId>
+                    <artifactId>gatling-maven-plugin</artifactId>
+                    <version>4.21.12</version>
+                    <configuration>
+                        <runMultipleSimulations>true</runMultipleSimulations>
+                        <jvmArgs>--add-opens=java.base/java.lang=ALL-UNNAMED</jvmArgs>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>enable-ui</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>1.10.0</version>
+                        <executions>
+                            <execution>
+                                <id>Install NodeJS and NPM</id>
+                                <goals>
+                                    <goal>install-node-and-npm</goal>
+                                    <goal>npm</goal>
+                                </goals>
+                                <configuration>
+                                    <nodeVersion>${node.version}</nodeVersion>
+                                    <npmVersion>${npm.version}</npmVersion>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>UI Tests</id>
+                                <goals><goal>npm</goal></goals>
+                                <phase>test</phase>
+                                <configuration><arguments>test</arguments></configuration>
+                            </execution>
+                            <execution>
+                                <id>npm run build</id>
+                                <goals><goal>npm</goal></goals>
+                                <phase>process-resources</phase>
+                                <configuration>
+                                    <arguments>run build</arguments>
+                                    <environmentVariables><NODE_ENV>production</NODE_ENV></environmentVariables>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

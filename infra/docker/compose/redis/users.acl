@@ -1,0 +1,3 @@
+user master +@all ~* on >masterpassord
+
+user boardeaux +@keyspace +@read +@write ~* +@connection on >boardeauxpass

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd"
+       default-autowire="constructor">
+  <!-- There's also a configuration that is generic to SpringMVC, but SpringDoc depends on it.
+         Search for "opendoc" or "swagger" in that XML to find all those beans. -->
+  <context:annotation-config />
+  <!-- Unfortunately we need to use Java Config for Spring Security, see details in JavaDocs -->
+
+  <bean id="instanceInfo" class="com.tgyozalyan.channelmanager.web.instanceinfo.InstanceInfo">
+    <constructor-arg index="0" value="${version}"/>
+    <constructor-arg index="1" value="${commit}"/>
+  </bean>
+
+  <bean id="activeInstanceChecker" class="com.tgyozalyan.channelmanager.web.instanceinfo.ActiveInstanceChecker">
+      <constructor-arg index="0" ref="instanceInfo"/>
+      <constructor-arg index="1" ref="restTemplate"/>
+      <constructor-arg index="2" value="${self_url.version:${self_url}/version}"/>
+  </bean>
+
+  <bean id="restTemplate" class="org.springframework.web.client.RestTemplate">
+      <constructor-arg ref="outboundRequestFactory"/>
+  </bean>
+
+  <bean id="outboundRequestFactory" class="org.springframework.http.client.SimpleClientHttpRequestFactory"/>
+
+  <bean class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer">
+    <property name="locations">
+      <array>
+        <value>classpath:/application.properties</value>
+        <value>classpath:/version.properties</value>
+      </array>
+    </property>
+  </bean>
+  <mvc:annotation-driven content-negotiation-manager="contentNegotiationManager">
+    <mvc:message-converters>
+    <!-- needed for byte range requests since spring internally maps a resource to regions per byte range  -->
+      <bean class="org.springframework.http.converter.ResourceRegionHttpMessageConverter"/>
+      <bean class="org.springframework.http.converter.ResourceHttpMessageConverter"/>
+      <bean class="org.springframework.http.converter.ByteArrayHttpMessageConverter"/>
+      <bean class="org.springframework.http.converter.StringHttpMessageConverter">
+        <!-- This must go together with CharacterEncodingFilter setting Content-Type with UTF-8 encoding in the response
+        (in EmbeddedTomcat). Otherwise, SpringMVC will encode it as UTF-8 but the browser won't know about it. -->
+        <constructor-arg index="0" value="UTF-8"/>
+      </bean>
+      <bean class="org.springframework.http.converter.json.JacksonJsonHttpMessageConverter"/>
+    </mvc:message-converters>
+  </mvc:annotation-driven>
+  <bean name="multipartResolver" class="org.springframework.web.multipart.support.StandardServletMultipartResolver" />
+
+  <mvc:resources mapping="/ui/*.html" location="classpath:/ui/">
+    <mvc:cache-control cache-public="false"/>
+  </mvc:resources>
+  <mvc:resources mapping="/ui/**" location="classpath:/ui/">
+    <mvc:cache-control cache-public="true" max-age="31536000"/>
+  </mvc:resources>
+<!--  <mvc:interceptors>-->
+<!--    <bean class="com.tgyozalyan.channelmanager.web.filter.filter.PutUsernameToLoggerMdcInterceptor"/>-->
+<!--  </mvc:interceptors>-->
+
+  <bean id="contentNegotiationManager" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+    <property name="useRegisteredExtensionsOnly" value="true"/>
+    <property name="favorParameter" value="true"/>
+    <property name="parameterName" value="format"/>
+    <property name="defaultContentType" value="application/json"/>
+    <property name="mediaTypes">
+      <map>
+        <entry key="css" value="text/css"/>
+        <entry key="js" value="application/javascript"/>
+        <entry key="json" value="application/json"/>
+      </map>
+    </property>
+  </bean>
+  <bean class="com.tgyozalyan.channelmanager.err.RestExceptionHandler"/>
+  <!-- Required for springdoc/swagger -->
+  <bean id="mvcConversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean"/>
+
+  <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource" destroy-method="close">
+    <property name="driverClass" value="${jdbc.driverClassName:org.postgresql.Driver}"/>
+    <property name="jdbcUrl" value="${db.url_final}"/>
+    <property name="user" value="${db.user}"/>
+    <property name="password" value="${db.pass}"/>
+    <!-- Set in the code that initializes Tomcat, since it depends on the size of Thread Pool -->
+    <property name="minPoolSize" value="${db.pool.min_connections:1}"/>
+    <property name="maxPoolSize" value="${db.pool.max_connections:10}"/>
+    <property name="idleConnectionTestPeriod" value="${db.pool.idle_conn_test_period_s:3600}"/>
+    <property name="checkoutTimeout" value="${db.pool.checkout_timeout_ms:10000}"/>
+    <!-- If password was set incorrectly for DB user, it would fail and then retry. Often the number
+         of retries is limited by DBAs which may lock the user. So the dtos shouldn't be too big-->
+    <property name="acquireRetryAttempts" value="${db.pool.acquire_attempts:2}"/>
+  </bean>
+  <bean class="com.tgyozalyan.channelmanager.db.FlywayContext"/>
+</beans>

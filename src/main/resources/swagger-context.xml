@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd"
+       default-autowire="constructor">
+
+  <!-- Assumes that <context:annotation-config /> is turned on (currently web-app-context.xml)
+    There's also a configuration in web-app-context.xml that is generic to SpringMVC, but SpringDoc depends on it.
+         Search for "opendoc" or "swagger" in that XML to find all those beans. -->
+  <bean class="com.tgyozalyan.springutils.swagger.SpringDocContext" />
+
+  <mvc:resources mapping="/swagger-ui/**" location="classpath:/META-INF/resources/webjars/swagger-ui/5.18.2/">
+    <mvc:resource-chain resource-cache="false">
+      <mvc:transformers>
+        <bean class="com.tgyozalyan.springutils.swagger.SwaggerHtmlTransformer"/>
+      </mvc:transformers>
+    </mvc:resource-chain>
+  </mvc:resources>
+
+  <bean class="org.springdoc.webmvc.api.OpenApiWebMvcResource"/>
+  <bean class="org.springdoc.webmvc.core.providers.SpringWebMvcProvider"/>
+  <bean class="org.springdoc.core.service.OpenAPIService"/>
+  <bean class="org.springdoc.core.providers.SpringDocProviders"/>
+
+  <bean class="org.springdoc.webmvc.core.service.RequestService"/>
+  <bean class="org.springdoc.core.service.GenericParameterService"/>
+  <bean class="org.springdoc.core.service.RequestBodyService"/>
+  <bean class="org.springdoc.core.service.SecurityService"/>
+  <bean class="org.springdoc.core.service.OperationService"/>
+  <bean class="org.springdoc.core.discoverer.SpringDocParameterNameDiscoverer"/>
+  <bean class="org.springdoc.core.service.GenericResponseService"/>
+  <bean class="org.springdoc.core.customizers.SpringDocCustomizers"/>
+  <bean class="org.springdoc.core.utils.PropertyResolverUtils"/>
+</beans>
